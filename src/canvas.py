@@ -1,8 +1,10 @@
-import time
 from getpass import getpass
 
 from selenium import webdriver
+from selenium.common import TimeoutException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import requests
 
@@ -34,13 +36,15 @@ class CanvasAPIInterface:
 
         self.__driver.find_element(By.ID, "_eventId_proceed").click()
 
-        time.sleep(2)
-
-        if self.__driver.title == "Dashboard":
+        try:
+            WebDriverWait(self.__driver, 5).until(
+                EC.title_is("Dashboard")
+            )
             print("Successfully logged in!")
-        else:
+        except TimeoutException:
             print("Failed logging in.")
             self.__driver.close()
+
 
     def create_requests_session(self) -> None:
         self.__session = requests.Session()
