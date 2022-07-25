@@ -7,13 +7,13 @@ from selenium.webdriver.common.by import By
 import requests
 
 
-def get_canvas_login():
+def get_canvas_login() -> tuple[str, str]:
     user = input("Username or Email: ")
     password = getpass()
     return user, password
 
 
-def canvas_login(canvas_url, username, password):
+def canvas_login(canvas_url: str, username: str, password: str) -> webdriver.Chrome | None:
     options = Options()
     options.headless = True
 
@@ -38,11 +38,11 @@ def canvas_login(canvas_url, username, password):
         browser.close()
 
 
-def create_requests_session():
+def create_requests_session() -> requests.sessions.Session:
     return requests.Session()
 
 
-def transfer_cookies(session, browser):
+def transfer_cookies(session: requests.sessions.Session, browser: webdriver.Chrome) -> requests.sessions.Session:
     # Set correct user agent
     selenium_user_agent = browser.execute_script("return navigator.userAgent;")
     session.headers.update({"user-agent": selenium_user_agent})
@@ -53,6 +53,6 @@ def transfer_cookies(session, browser):
     return session
 
 
-def close_all_connections(session, browser):
+def close_all_connections(session: requests.sessions.Session, browser: webdriver.Chrome) -> None:
     session.close()
     browser.close()
