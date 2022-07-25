@@ -1,14 +1,20 @@
+from time import sleep
+from getpass import getpass
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
 
 def access_canvas(url):
+    password = getpass()
+    sleep(2)
+
     options = Options()
-    options.headless = True
+    # options.headless = True
 
-    driver = webdriver.Chrome(options=options)
-    driver.get(url)
+    browser = webdriver.Chrome(options=options)
+    browser.get(url)
 
-    print(driver.title)
+    print(browser.title)
 
-    driver.close()
+    browser.close()
