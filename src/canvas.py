@@ -36,3 +36,23 @@ def canvas_login(canvas_url, username, password):
     else:
         print("Failed logging in.")
         browser.close()
+
+
+def create_requests_session():
+    return requests.Session()
+
+
+def transfer_cookies(session, browser):
+    # Set correct user agent
+    selenium_user_agent = browser.execute_script("return navigator.userAgent;")
+    session.headers.update({"user-agent": selenium_user_agent})
+
+    for cookie in browser.get_cookies():
+        session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
+
+    return session
+
+
+def close_all_connections(session, browser):
+    session.close()
+    browser.close()
