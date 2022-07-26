@@ -23,7 +23,7 @@ class CanvasAPIInterface:
         self.__username = None
         self.__password = None
         self.__driver = None
-        self.__session = None
+        self.__session = self.__create_requests_session()
 
     @staticmethod
     def __verify_canvas_url(canvas_url: str | None) -> str:
@@ -36,6 +36,10 @@ class CanvasAPIInterface:
         if canvas_url[-1] != "/":
             return canvas_url + "/"
         return canvas_url
+
+    @staticmethod
+    def __create_requests_session() -> requests.sessions.Session:
+        return requests.Session()
 
     def get_canvas_login(self) -> None:
         self.__username = input("Username or Email: ")
@@ -64,9 +68,6 @@ class CanvasAPIInterface:
         except TimeoutException:
             print("Failed logging in.")
             self.__driver.close()
-
-    def create_requests_session(self) -> None:
-        self.__session = requests.Session()
 
     def transfer_cookies(self):
         # Set correct user agent
