@@ -1,4 +1,5 @@
 from getpass import getpass
+import re
 
 from selenium import webdriver
 from selenium.common import TimeoutException
@@ -11,11 +12,23 @@ import requests
 
 class CanvasAPIInterface:
     def __init__(self, canvas_url: str = None):
-        self.__canvas_url = canvas_url if canvas_url else input()
+        self.__canvas_url = self.__verify_canvas_url(canvas_url)
         self.__username = None
         self.__password = None
         self.__driver = None
         self.__session = None
+
+    @staticmethod
+    def __verify_canvas_url(canvas_url: str | None) -> str:
+        url_pattern = r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\/?"
+        if not canvas_url:
+            canvas_url = input("Enter your full Canvas url: ")
+        while not re.search(url_pattern, canvas_url) or "canvas" not in canvas_url:
+            print("Invalid Canvas url.")
+            canvas_url = input("Enter your full Canvas url: ")
+        if canvas_url[-1] != "/":
+            return canvas_url + "/"
+        return canvas_url
 
     def get_canvas_login(self) -> None:
         self.__username = input("Username or Email: ")
@@ -44,7 +57,6 @@ class CanvasAPIInterface:
         except TimeoutException:
             print("Failed logging in.")
             self.__driver.close()
-
 
     def create_requests_session(self) -> None:
         self.__session = requests.Session()
