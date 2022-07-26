@@ -1,5 +1,8 @@
 from getpass import getpass
 import re
+import json
+import sys
+import time
 
 from selenium import webdriver
 from selenium.common import TimeoutException
@@ -68,6 +71,16 @@ class CanvasAPIInterface:
 
         for cookie in self.__driver.get_cookies():
             self.__session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
+
+    def get_course_info(self):
+        response = self.__session.get(f"{self.__canvas_url}api/v1/courses.json?enrollment_state=active")
+        if response.status_code == 200:
+            return response
+        else:
+            print("Failed response. Closing all connections and quitting.")
+            self.close_all_connections()
+            time.sleep(3)
+            sys.exit()
 
     def close_all_connections(self) -> None:
         self.__session.close()
