@@ -1,8 +1,10 @@
+from __future__ import annotations
 from getpass import getpass
 import re
 import json
 import sys
 import time
+from typing import Union, Type, Any
 
 from selenium import webdriver
 from selenium.common import TimeoutException
@@ -11,6 +13,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import requests
+
+JSONType = Union[dict[str, Any], list[Any], int, str, float, bool, Type[None]]
 
 
 class CanvasAPIInterface:
@@ -72,10 +76,10 @@ class CanvasAPIInterface:
         for cookie in self.__driver.get_cookies():
             self.__session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
 
-    def get_course_info(self):
+    def get_course_info(self) -> JSONType:
         response = self.__session.get(f"{self.__canvas_url}api/v1/courses.json?enrollment_state=active")
         if response.status_code == 200:
-            return response
+            return response.json()
         else:
             print("Failed response. Closing all connections and quitting.")
             self.close_all_connections()
