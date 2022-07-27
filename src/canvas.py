@@ -66,7 +66,7 @@ class CanvasAPIInterface:
             WebDriverWait(self.__driver, 5).until(
                 EC.title_is("Dashboard")
             )
-            print("Successfully logged in!")
+            print("Successfully logged in!\n")
         except TimeoutException:
             print("Failed logging in.")
             self.__driver.close()
@@ -105,17 +105,17 @@ class CanvasAPIInterface:
 
     def __extract_all_assignment_info(self, courses: JSONType) -> list[dict[str, str | int]]:
         assignments = []
-        for course in [courses[6]]:
-            course_name = course["name"]
+        for course in courses:
+            course_name = course["course_code"]
             print(f"Grabbing assignment data for {course_name}")
-            if not re.match(r"[A-Z]{3,} [1-8]\d{2}[A-Z]?:", course_name):
+            if not re.match(r"[A-Z]{3,} [1-8]\d{2}[A-Z]?", course_name):
                 print(f"{course_name} is not a valid course. Skipping.")
-                time.sleep(2)
+                time.sleep(4)
                 continue
             assignment_json = self.__get_course_assignments(course["id"])
             assignment_info = self.__extract_assignment_info(course_name, assignment_json)
             assignments.append(assignment_info)
-            time.sleep(2)
+            time.sleep(4)
         return list(itertools.chain(*assignments))
 
     def __close_all_connections(self) -> None:
