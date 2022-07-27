@@ -1,9 +1,9 @@
 from __future__ import annotations
-from getpass import getpass
 import re
-import json
 import sys
 import time
+import itertools
+from getpass import getpass
 from typing import Union, Type, Any
 
 from selenium import webdriver
@@ -41,11 +41,11 @@ class CanvasAPIInterface:
     def __create_requests_session() -> requests.sessions.Session:
         return requests.Session()
 
-    def get_canvas_login(self) -> None:
+    def __get_canvas_login(self) -> None:
         self.__username = input("Username or Email: ")
         self.__password = getpass()
 
-    def canvas_login(self) -> None:
+    def __canvas_login(self) -> None:
         options = Options()
         options.headless = True
 
@@ -69,7 +69,7 @@ class CanvasAPIInterface:
             print("Failed logging in.")
             self.__driver.close()
 
-    def transfer_cookies(self):
+    def __transfer_cookies(self):
         # Set correct user agent
         selenium_user_agent = self.__driver.execute_script("return navigator.userAgent;")
         self.__session.headers.update({"user-agent": selenium_user_agent})
@@ -84,25 +84,47 @@ class CanvasAPIInterface:
             return response.json()
         else:
             print("Failed response. Closing all connections and quitting.")
-            self.close_all_connections()
+            self.__close_all_connections()
             time.sleep(3)
             sys.exit()
 
-    def get_course_info(self) -> JSONType:
+    def __get_course_info(self) -> JSONType:
         return self.__request_api_data("courses.json?enrollment_state=active")
 
-    def get_course_assignments(self, course_id: int) -> JSONType:
+    def __get_course_assignments(self, course_id: int) -> JSONType:
         return self.__request_api_data(f"courses/{course_id}/assignments")
 
     @staticmethod
-    def extract_assignment_info(course_name: str, assignment_json: JSONType) -> list[dict[str, int | str]]:
+    def __extract_assignment_info(course_name: str, assignment_json: JSONType) -> list[dict[str, int | str]]:
         useful_keys = ["id", "description", "due_at", "unlock_at", "name", "html_url"]
         return [{"course_name": course_name} | {key: assignment.get(key)
                 for key in useful_keys}
                 for assignment in assignment_json]
 
-    def close_all_connections(self) -> None:
+    def __close_all_connections(self) -> None:
         self.__session.close()
         self.__driver.close()
         print("All connections closed!")
 
+    def run(self) -> list[dict[str, str | int]]:
+        self.__get_canvas_login()
+        self.__canvas_login()
+        self.__transfer_cookies()
+        courses = self.__get_course_info()
+
+        assignments = []
+        for course in [courses[6]]:
+            course_name = course["name"]
+            print(f"Grabbing assignment data for {course_name}")
+            if not re.match(r"[A-Z]{3,} [1-8]\d{2}[A-Z]?:", course_name):
+                print(f"{course_name} is not a valid course. Skipping.")
+                time.sleep(2)
+                continue
+            assignment_json = self.__get_course_assignments(course["id"])
+            assignment_info = self.__extract_assignment_info(course_name, assignment_json)
+            assignments.append(assignment_info)
+            time.sleep(2)
+    
+        self.__close_all_connections()
+
+        return list(itertools.chain(*assignments))
