@@ -59,7 +59,7 @@ class CanvasAPIInterface:
         password_input.send_keys(self.__password)
 
         self.__driver.find_element(By.ID, "_eventId_proceed").click()
-
+        print("Attempting to log in to canvas.")
         try:
             WebDriverWait(self.__driver, 5).until(
                 EC.title_is("Dashboard")
@@ -78,7 +78,8 @@ class CanvasAPIInterface:
             self.__session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
 
     def __request_api_data(self, api_suffix: str) -> JSONType:
-        response = self.__session.get(f"{self.__canvas_url}api/v1/{api_suffix}?per_page=50")
+        request_url = f"{self.__canvas_url}api/v1/{api_suffix}{'?' if '?' not in api_suffix else '&'}per_page=50"
+        response = self.__session.get(request_url)
         if response.status_code == 200:
             return response.json()
         else:
@@ -92,6 +93,11 @@ class CanvasAPIInterface:
 
     def get_course_assignments(self, course_id: int) -> JSONType:
         return self.__request_api_data(f"courses/{course_id}/assignments")
+
+    @staticmethod
+    def extract_assignment_info(assignment_json: JSONType) -> list[dict[str , int | str]]:
+        useful_keys = ["id", "description", "due_at", "unlock_at", "name", "html_url"]
+        return [{key: assignment.get(key) for key in useful_keys} for assignment in assignment_json]
 
     def close_all_connections(self) -> None:
         self.__session.close()
