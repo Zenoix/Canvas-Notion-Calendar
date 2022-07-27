@@ -78,7 +78,7 @@ class CanvasAPIInterface:
             self.__session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
 
     def __request_api_data(self, api_suffix: str) -> JSONType:
-        request_url = f"{self.__canvas_url}api/v1/{api_suffix}{'?' if '?' not in api_suffix else '&'}per_page=50"
+        request_url = f"{self.__canvas_url}api/v1/{api_suffix}{'?' if '?' not in api_suffix else '&'}per_page=100"
         response = self.__session.get(request_url)
         if response.status_code == 200:
             return response.json()
@@ -95,11 +95,14 @@ class CanvasAPIInterface:
         return self.__request_api_data(f"courses/{course_id}/assignments")
 
     @staticmethod
-    def extract_assignment_info(assignment_json: JSONType) -> list[dict[str , int | str]]:
+    def extract_assignment_info(course_name: str, assignment_json: JSONType) -> list[dict[str, int | str]]:
         useful_keys = ["id", "description", "due_at", "unlock_at", "name", "html_url"]
-        return [{key: assignment.get(key) for key in useful_keys} for assignment in assignment_json]
+        return [{"course_name": course_name} | {key: assignment.get(key)
+                for key in useful_keys}
+                for assignment in assignment_json]
 
     def close_all_connections(self) -> None:
         self.__session.close()
         self.__driver.close()
         print("All connections closed!")
+
