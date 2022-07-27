@@ -24,6 +24,7 @@ class CanvasAPIInterface:
         self.__password = None
         self.__driver = None
         self.__session = self.__create_requests_session()
+        self.__assignments = None
 
     @staticmethod
     def __verify_canvas_url(canvas_url: str | None) -> str:
@@ -42,8 +43,9 @@ class CanvasAPIInterface:
         return requests.Session()
 
     def __get_canvas_login(self) -> None:
-        self.__username = input("Username or Email: ")
-        self.__password = getpass()
+        if not self.__username and not self.__password:
+            self.__username = input("Username or Email: ")
+            self.__password = getpass()
 
     def __canvas_login(self) -> None:
         options = Options()
@@ -101,17 +103,7 @@ class CanvasAPIInterface:
                 for key in useful_keys}
                 for assignment in assignment_json]
 
-    def __close_all_connections(self) -> None:
-        self.__session.close()
-        self.__driver.close()
-        print("All connections closed!")
-
-    def run(self) -> list[dict[str, str | int]]:
-        self.__get_canvas_login()
-        self.__canvas_login()
-        self.__transfer_cookies()
-        courses = self.__get_course_info()
-
+    def __extract_all_assignment_info(self, courses: JSONType) -> list[dict[str, str | int]]:
         assignments = []
         for course in [courses[6]]:
             course_name = course["name"]
@@ -124,7 +116,21 @@ class CanvasAPIInterface:
             assignment_info = self.__extract_assignment_info(course_name, assignment_json)
             assignments.append(assignment_info)
             time.sleep(2)
-    
-        self.__close_all_connections()
-
         return list(itertools.chain(*assignments))
+
+    def __close_all_connections(self) -> None:
+        self.__session.close()
+        self.__driver.close()
+        print("All connections closed!")
+
+    @property
+    def assignments(self) -> list[dict[str, str | int]] | None:
+        return self.__assignments
+
+    def run(self) -> None:
+        self.__get_canvas_login()
+        self.__canvas_login()
+        self.__transfer_cookies()
+        courses = self.__get_course_info()
+        self.__assignments = self.__extract_all_assignment_info(courses)
+        self.__close_all_connections()
