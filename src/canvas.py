@@ -78,7 +78,7 @@ class CanvasAPIInterface:
             self.__session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
 
     def __request_api_data(self, api_suffix: str) -> JSONType:
-        response = self.__session.get(f"{self.__canvas_url}api/v1/{api_suffix}")
+        response = self.__session.get(f"{self.__canvas_url}api/v1/{api_suffix}?per_page=50")
         if response.status_code == 200:
             return response.json()
         else:
@@ -91,7 +91,7 @@ class CanvasAPIInterface:
         return self.__request_api_data("courses.json?enrollment_state=active")
 
     def get_course_assignments(self, course_id: int) -> JSONType:
-        return self.__request_api_data(f"courses/{course_id}/assignments?per_page=50")
+        return self.__request_api_data(f"courses/{course_id}/assignments")
 
     def close_all_connections(self) -> None:
         self.__session.close()
