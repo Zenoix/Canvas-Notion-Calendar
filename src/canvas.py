@@ -87,12 +87,13 @@ class CanvasAPIInterface:
             time.sleep(3)
             sys.exit()
 
-    def __get_course_info(self) -> JSONType:
+    def get_course_info(self) -> JSONType:
         return self.__request_api_data("courses.json?enrollment_state=active")
 
-    def __get_course_assignments(self, course_id: int) -> JSONType:
+    def get_course_assignments(self, course_id: int) -> JSONType:
         return self.__request_api_data(f"courses/{course_id}/assignments?per_page=50")
 
     def close_all_connections(self) -> None:
         self.__session.close()
         self.__driver.close()
+        print("All connections closed!")
