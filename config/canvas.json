@@ -7,5 +7,6 @@
     "username_id": "username",
     "password_id": "password",
     "login_button_id": "_eventId_proceed"
-  }
+  },
+  "api_max_results": 100
 }
