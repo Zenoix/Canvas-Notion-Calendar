@@ -69,6 +69,7 @@ class CanvasAPIInterface:
         if not self.__username and not self.__password:
             self.__username = input("Username or Email: ")
             self.__password = getpass()
+        print()
 
     def __canvas_login(self) -> None:
         """
