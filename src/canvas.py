@@ -148,20 +148,34 @@ class CanvasAPIInterface:
         """
         return self.__request_api_data(f"courses/{course_id}/assignments")
 
-    def __extract_assignment_info(self, course_name: str, assignment_json: JSONType) -> list[dict[str, int | str]]:
+    def __get_course_assignment_groups(self, course_id: int) -> dict[int, str]:
+        """
+        Get the assignment groups for a given course ID. From there, it returns a new
+
+        :param course_id: The ID of the course whose assignment groups are of interest
+        :return: Dictionary with assignment group id as key, and the assignment type as the value
+        """
+        assignment_groups = self.__request_api_data(f"courses/{course_id}/assignment_groups")
+        return {group["id"]: group["name"] for group in assignment_groups}
+
+    def __extract_assignment_info(self, course_name: str, assignment_groups: dict[int, str],
+                                  assignment_json: JSONType) -> list[dict[str, int | str]]:
         """
         Extract the relevant pieces of information from an assignment json.
         The relevant pieces of information will be used in the creation of the Notion calendar pages.
 
         :param course_name: Name of the course
-        :param assignment_json: The json of all assignments for the given course name
+        :param: assignment_groups: Dictionary with assignment group id as key, and the assignment type as the value
+        :param assignment_json: The json of all assignments for the given course
         :return: A list containing assignment dictionaries for a given course.
         Each dictionary will be for a single assignment with the relevant pieces of information
         """
         useful_keys = self.__config["relevant_assignment_keys"]
-        return [{"course_name": course_name} | {key: assignment.get(key)
+        return [
+            {"course_name": course_name} | {"assignment_type": assignment_groups[assignment["assignment_group_id"]]} | {
+                key: assignment.get(key)
                 for key in useful_keys}
-                for assignment in assignment_json]
+            for assignment in assignment_json]
 
     def __extract_all_assignment_info(self, courses: JSONType) -> list[dict[str, str | int]]:
         """
@@ -181,9 +195,11 @@ class CanvasAPIInterface:
                 time.sleep(4)
                 continue
             assignment_json = self.__get_course_assignments(course["id"])
-            assignment_info = self.__extract_assignment_info(course_name, assignment_json)
+            time.sleep(2)  # Sleep to prevent too many api calls too quickly
+            assignment_groups = self.__get_course_assignment_groups(course["id"])
+            assignment_info = self.__extract_assignment_info(course_name, assignment_groups, assignment_json)
             assignments.append(assignment_info)
-            time.sleep(4)  # Sleep to prevent too many api calls too quickly
+            time.sleep(2.5)  # Sleep to prevent too many api calls too quickly
         print()
         # Unpack all the different assignments into just one list of dictionaries
         return list(itertools.chain(*assignments))
