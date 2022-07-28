@@ -1,7 +1,6 @@
 import os
 import requests
-import json
-import datetime
+import time
 
 from dotenv import load_dotenv
 
@@ -29,25 +28,21 @@ class NotionAPIInterface:
     def assignments(self, assignments_list: list[dict[str, str | int]]):
         self.__assignments = assignments_list
 
-    def create_title_properties(self, title="Untitled"):
-        return {"title": [{"type": "text", "text": {"content": title}}]}
+    @staticmethod
+    def __get_assignment_types(assignment):
+        types = [{"name": "Deadline"}]
 
-    def create_date_properties(self, event_date=None):
-        if not event_date:
-            event_date = datetime.date.today().strftime("%Y-%m-%d")
-        return {"date": {"start": event_date}}
+        valid_types = ("quiz", "test", "tutorial", "lab", "assignment", "exam")
+        for assignment_type in valid_types:
+            if assignment_type in assignment["assignment_type"].lower() or assignment["name"].lower():
+                types.append({"name": assignment_type.title()})
+                break
+        else:
+            types.append({"name": "Unknown"})
+        return types
 
-    def create_website_properties(self, url=None):
-        return {"type": "url", "url": url}
-
-    def create_module_properties(self, module_name=None):
-        return {"type": "select", "select": {"name": module_name}}
-
-    def create_type_properties(self, types):
-        return {"type": "multi_select", "multi_select": [{"name": event_type} for event_type in types]}
-
-    def create_payload(self, title: str, date: str, assignment_url: str = None, course_name: str = "test",
-                       assignment_type: list[dict[str, str]] = None):
+    def create_payload_json(self, title: str, date: str, assignment_url: str = None, course_name: str = "test",
+                            assignment_types: list[dict[str, str]] = None):
         return {
             "parent": {"type": "database_id",
                        "database_id": self.__DATABASE_ID},
@@ -83,23 +78,39 @@ class NotionAPIInterface:
                 },
                 "Type": {
                     "type": "multi_select",
-                    "multi_select": assignment_type
+                    "multi_select": assignment_types
                 },
             }
         }
 
-    def create_notion_page(self):
+    def extract_assignment_information(self, assignment):
+        assignment_types = self.__get_assignment_types(assignment)
+        return assignment.get("name"), assignment.get("due_at"), assignment.get("html_url"), \
+               assignment.get("course_name"), assignment_types
+
+    def create_notion_page(self, assignment, headers):
+        assignment_information = self.extract_assignment_information(assignment)
+        payload = self.create_payload_json(*assignment_information)
+
+        print(f"{assignment_information[3]} - {assignment_information[0]}")
+        
+        requests.post(self.__API_BASE_URL, json=payload, headers=headers)
+        time.sleep(2)
+
+    def run(self):
+        if not self.__assignments:
+            print("No assignment data given. Use NotionAPIInterface.assignments = ... "
+                  "to pass in assignment data before running again.")
+            return
+
         headers = {
             "Authorization": os.getenv("NOTION_KEY"),
             "Accept": "application/json",
             "Notion-Version": "2022-02-22",
             "Content-Type": "application/json"
         }
-        payload = self.create_payload("Testing", datetime.datetime.now().isoformat())
-        response = requests.post(self.__API_BASE_URL, json=payload, headers=headers)
-
-        print(json.dumps(response.json(), indent=2))
+        for assignment in self.__assignments:
+            self.create_notion_page(assignment, headers)
 
 
 n = NotionAPIInterface()
-n.create_notion_page()
