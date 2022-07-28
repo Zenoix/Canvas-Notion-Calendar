@@ -93,7 +93,7 @@ class NotionAPIInterface:
         payload = self.create_payload_json(*assignment_information)
 
         print(f"{assignment_information[3]} - {assignment_information[0]}")
-        
+
         requests.post(self.__API_BASE_URL, json=payload, headers=headers)
         time.sleep(2)
 
@@ -111,6 +111,3 @@ class NotionAPIInterface:
         }
         for assignment in self.__assignments:
             self.create_notion_page(assignment, headers)
-
-
-n = NotionAPIInterface()
