@@ -2,6 +2,7 @@ from __future__ import annotations
 import re
 import sys
 import time
+import json
 import itertools
 from getpass import getpass
 from typing import Union, Type, Any
@@ -18,8 +19,10 @@ JSONType = Union[dict[str, Any], list[Any], int, str, float, bool, Type[None]]
 
 
 class CanvasAPIInterface:
-    def __init__(self, canvas_url: str = None):
-        self.__canvas_url = self.__verify_canvas_url(canvas_url)
+    def __init__(self):
+        with open("config/canvas.json") as cfg:
+            self.__config = json.load(cfg)
+        self.__canvas_url = self.__verify_canvas_url(self.__config["canvas_url"])
         self.__username = None
         self.__password = None
         self.__driver = None
@@ -29,7 +32,7 @@ class CanvasAPIInterface:
     @staticmethod
     def __verify_canvas_url(canvas_url: str | None) -> str:
         url_pattern = r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\/?"
-        if not canvas_url:
+        if not canvas_url or not isinstance(canvas_url, str):
             canvas_url = input("Enter your full Canvas url: ")
         while not re.search(url_pattern, canvas_url) or "canvas" not in canvas_url:
             print("Invalid Canvas url.")
@@ -64,7 +67,7 @@ class CanvasAPIInterface:
         print("Attempting to log in to canvas.")
         try:
             WebDriverWait(self.__driver, 5).until(
-                EC.title_is("Dashboard")
+                EC.title_is(self.__config["canvas_page_title"])
             )
             print("Successfully logged in!\n")
         except TimeoutException:
@@ -96,9 +99,8 @@ class CanvasAPIInterface:
     def __get_course_assignments(self, course_id: int) -> JSONType:
         return self.__request_api_data(f"courses/{course_id}/assignments")
 
-    @staticmethod
-    def __extract_assignment_info(course_name: str, assignment_json: JSONType) -> list[dict[str, int | str]]:
-        useful_keys = ["id", "description", "due_at", "unlock_at", "name", "html_url"]
+    def __extract_assignment_info(self, course_name: str, assignment_json: JSONType) -> list[dict[str, int | str]]:
+        useful_keys = self.__config["relevant_assignment_keys"]
         return [{"course_name": course_name} | {key: assignment.get(key)
                 for key in useful_keys}
                 for assignment in assignment_json]
@@ -108,7 +110,7 @@ class CanvasAPIInterface:
         for course in courses:
             course_name = course["course_code"]
             print(f"Grabbing assignment data for {course_name}")
-            if not re.match(r"[A-Z]{3,} [1-8]\d{2}[A-Z]?", course_name):
+            if not re.match(self.__config["course_name_regex"], course_name):
                 print(f"{course_name} is not a valid course. Skipping.")
                 time.sleep(4)
                 continue
@@ -116,6 +118,7 @@ class CanvasAPIInterface:
             assignment_info = self.__extract_assignment_info(course_name, assignment_json)
             assignments.append(assignment_info)
             time.sleep(4)
+        print()
         return list(itertools.chain(*assignments))
 
     def __close_all_connections(self) -> None:

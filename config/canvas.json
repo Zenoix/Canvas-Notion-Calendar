@@ -1,0 +1,6 @@
+{
+  "canvas_url": "https://canvas.auckland.ac.nz/",
+  "course_name_regex": "[A-Z]{3,} [1-8]\\d{2}[A-Z]?",
+  "canvas_page_title": "Dashboard",
+  "relevant_assignment_keys": ["id", "description", "due_at", "unlock_at", "name", "html_url"]
+}
