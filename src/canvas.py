@@ -156,7 +156,7 @@ class CanvasAPIInterface:
         :return: Dictionary with assignment group id as key, and the assignment type as the value
         """
         assignment_groups = self.__request_api_data(f"courses/{course_id}/assignment_groups")
-        return {group["id"]: group["name"] for group in assignment_groups}
+        return {group["id"]: group["name"].strip() for group in assignment_groups}
 
     def __extract_assignment_info(self, course_name: str, assignment_groups: dict[int, str],
                                   assignment_json: JSONType) -> list[dict[str, int | str]]:
