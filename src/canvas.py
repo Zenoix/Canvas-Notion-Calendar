@@ -57,13 +57,14 @@ class CanvasAPIInterface:
         self.__driver = webdriver.Chrome(options=options)
         self.__driver.get(self.__canvas_url)
 
-        user_input = self.__driver.find_element(By.ID, "username")
+        html_ids = self.__config["canvas_login_html_ids"]
+        user_input = self.__driver.find_element(By.ID, html_ids["username_id"])
         user_input.send_keys(self.__username)
 
-        password_input = self.__driver.find_element(By.ID, "password")
+        password_input = self.__driver.find_element(By.ID, html_ids["password_id"])
         password_input.send_keys(self.__password)
 
-        self.__driver.find_element(By.ID, "_eventId_proceed").click()
+        self.__driver.find_element(By.ID, html_ids["login_button_id"]).click()
         print("Attempting to log in to canvas.")
         try:
             WebDriverWait(self.__driver, 5).until(
