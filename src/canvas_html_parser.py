@@ -8,46 +8,88 @@ class CanvasToNotionHTMLParser(HTMLParser):
         self.stack = deque()
         self.__output = []
         self.__latest_block = None
+        self.__latest_url = None
 
     def handle_starttag(self, tag, attrs):
-        self.stack.append(tag)
-
-    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        # <br>
-        pass
+        if len(self.stack) > 0 and self.stack[-1] == "p":
+            self.__output.append(self.__latest_block)
+        if tag == "a":
+            for name, value in attrs:
+                if name == "href":
+                    self.__latest_url = value
+                    break
+        if tag in ("p", "h1", "h2", "h3", "a"):
+            self.stack.append(tag)
 
     def handle_endtag(self, tag):
-        if self.stack[-1] == tag:
-            self.stack.remove()
+        if tag in ("p", "h1", "h2", "h3", "a"):
+            self.stack.pop()
         if len(self.stack) == 0:
             self.__output.append(self.__latest_block)
 
     def handle_data(self, data):
-        match self.stack[-1].lower():
-            case "p":
-                pass
-            case "h1" | "h2" | "h3":
-                pass
-            case "code":
-                pass
-            case "ul":
-                pass
-            case "li":
-                pass
-            case "h":
-                pass
-            case "em":
-                pass
-            case "strong":
-                pass
-
-
-
-
-        data = {
+        # TODO Fix duplicate
+        if len(self.stack) == 0:
+            return
+        latest_opening_tag = self.stack[-1]
+        if latest_opening_tag == "p":
+            text_type = "paragraph"
+        elif latest_opening_tag in ("h1", "h2", "h3"):
+            text_type = f"heading_{latest_opening_tag[-1]}"
+        elif latest_opening_tag == "a":
+            self.__latest_block = {
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {
+                            "content": data,
+                            "link": {
+                                "url": self.__latest_url
+                            }
+                        }
+                    }]
+                }
+            }
+            return
+        else:
+            text_type = "paragraph"
+        self.__latest_block = {
             "object": "block",
+            "type": text_type,
+            text_type: {
+                "rich_text": [{
+                    "type": "text",
+                    "text": {
+                        "content": data
+                    }
+                }]
+            }
         }
 
+    @property
+    def parsed_content(self):
+        return self.__output
+
+
+class MyHTMLParser(HTMLParser):
+    def handle_starttag(self, tag, attrs):
+        print("Encountered a start tag:", tag)
+
+    def handle_endtag(self, tag):
+        print("Encountered an end tag :", tag)
+
+    def handle_data(self, data):
+        print("Encountered some data  :", data)
+
+parser = MyHTMLParser()
+parser.feed('<p>Here are the tutorial sheets:&nbsp;<strong> (Please take a print or BYO device to class to view the tutorial sheets)</strong></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version1.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675212?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675212\" data-api-returntype=\"File\">Tutorial 9-Sheet 1</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version2.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675213?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675213\" data-api-returntype=\"File\">Tutorial 9-Sheet 2</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675214?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675214\" data-api-returntype=\"File\">Tutorial 9-Sheet 3</a></p>\n<p><span style=\"background-color: #f1c40f;\">If you are submitting the tutorial on Canvas, you can pick any sheet from the above and submit your work.</span></p>')
+parser.close()
 
 parser = CanvasToNotionHTMLParser()
-parser.feed('<p>Here is the tutorial sheet: &nbsp;<a class=\"instructure_file_link instructure_scribd_file inline_disabled\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8123667?wrap=1\" target=\"_blank\" data-canvas-previewable=\"true\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8123667\" data-api-returntype=\"File\">Tutorial 1</a></p>')
+parser.feed("<p>Here are the tutorial sheets:&nbsp;<strong> (Please take a print or BYO device to class to view the tutorial sheets)</strong></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version1.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675212?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675212\" data-api-returntype=\"File\">Tutorial 9-Sheet 1</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version2.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675213?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675213\" data-api-returntype=\"File\">Tutorial 9-Sheet 2</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675214?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675214\" data-api-returntype=\"File\">Tutorial 9-Sheet 3</a></p>\n<p><span style=\"background-color: #f1c40f;\">If you are submitting the tutorial on Canvas, you can pick any sheet from the above and submit your work.</span></p>")
+content = parser.parsed_content
+parser.close()
+print(content)
+
