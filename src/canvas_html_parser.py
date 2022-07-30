@@ -1,6 +1,7 @@
 from html.parser import HTMLParser
 from collections import deque
 
+
 class CanvasToNotionHTMLParser(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self)
@@ -24,8 +25,9 @@ class CanvasToNotionHTMLParser(HTMLParser):
     def handle_endtag(self, tag):
         if tag in self.__valid_tags:
             self.stack.pop()
-        if len(self.stack) == 0:
+        if len(self.stack) == 0 and self.__latest_block:
             self.__output.append(self.__latest_block)
+            self.__latest_block = None
 
     def handle_data(self, data):
         # TODO Fix duplicate
@@ -117,13 +119,32 @@ class MyHTMLParser(HTMLParser):
     def handle_data(self, data):
         print("Encountered some data  :", data)
 
+
 parser = MyHTMLParser()
-parser.feed('<p>Here are the tutorial sheets:&nbsp;<strong> (Please take a print or BYO device to class to view the tutorial sheets)</strong></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version1.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675212?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675212\" data-api-returntype=\"File\">Tutorial 9-Sheet 1</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version2.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675213?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675213\" data-api-returntype=\"File\">Tutorial 9-Sheet 2</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675214?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675214\" data-api-returntype=\"File\">Tutorial 9-Sheet 3</a></p>\n<p><span style=\"background-color: #f1c40f;\">If you are submitting the tutorial on Canvas, you can pick any sheet from the above and submit your work.</span></p>')
+parser.feed(
+    '<p>Here are the tutorial sheets:&nbsp;<strong> (Please take a print or BYO device to class to view the tutorial sheets)</strong></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version1.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675212?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675212\" data-api-returntype=\"File\">Tutorial 9-Sheet 1</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version2.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675213?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675213\" data-api-returntype=\"File\">Tutorial 9-Sheet 2</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675214?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675214\" data-api-returntype=\"File\">Tutorial 9-Sheet 3</a></p>\n<p><span style=\"background-color: #f1c40f;\">If you are submitting the tutorial on Canvas, you can pick any sheet from the above and submit your work.</span></p>')
 parser.close()
 
 parser = CanvasToNotionHTMLParser()
-parser.feed("<p>Here are the tutorial sheets:&nbsp;<strong> (Please take a print or BYO device to class to view the tutorial sheets)</strong></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version1.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675212?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675212\" data-api-returntype=\"File\">Tutorial 9-Sheet 1</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version2.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675213?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675213\" data-api-returntype=\"File\">Tutorial 9-Sheet 2</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675214?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675214\" data-api-returntype=\"File\">Tutorial 9-Sheet 3</a></p>\n<p><span style=\"background-color: #f1c40f;\">If you are submitting the tutorial on Canvas, you can pick any sheet from the above and submit your work.</span></p>")
+parser.feed(
+    "<p>Here are the tutorial sheets:&nbsp;"
+    "<strong> (Please take a print or BYO device to class to view the tutorial sheets)"
+    "</strong>"
+    "</p>\n"
+    "<p>"
+    "<a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version1.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675212?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675212\" data-api-returntype=\"File\">"
+    "Tutorial 9-Sheet 1"
+    "</a>"
+    "</p>\n"
+    "<p>"
+    "<a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version2.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675213?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675213\" data-api-returntype=\"File\">"
+    "Tutorial 9-Sheet 2</a>"
+    "</p>\n"
+    "<p>"
+    "<a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675214?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675214\" data-api-returntype=\"File\">Tutorial 9-Sheet 3</a></p>\n<p><span style=\"background-color: #f1c40f;\">"
+    "If you are submitting the tutorial on Canvas, you can pick any sheet from the above and submit your work."
+    "</span>"
+    "</p>")
 content = parser.parsed_content
 parser.close()
 print(content)
-
