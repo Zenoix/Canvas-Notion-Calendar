@@ -4,7 +4,7 @@ from collections import deque
 class CanvasToNotionHTMLParser(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self)
-
+        self.__valid_tags = ("p", "h1", "h2", "h3", "a", "strong")
         self.stack = deque()
         self.__output = []
         self.__latest_block = None
@@ -18,11 +18,11 @@ class CanvasToNotionHTMLParser(HTMLParser):
                 if name == "href":
                     self.__latest_url = value
                     break
-        if tag in ("p", "h1", "h2", "h3", "a"):
+        if tag in self.__valid_tags:
             self.stack.append(tag)
 
     def handle_endtag(self, tag):
-        if tag in ("p", "h1", "h2", "h3", "a"):
+        if tag in self.__valid_tags:
             self.stack.pop()
         if len(self.stack) == 0:
             self.__output.append(self.__latest_block)
@@ -48,6 +48,40 @@ class CanvasToNotionHTMLParser(HTMLParser):
                             "link": {
                                 "url": self.__latest_url
                             }
+                        }
+                    }]
+                }
+            }
+            return
+        elif latest_opening_tag == "strong":
+            self.__latest_block = {
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {
+                            "content": data
+                        },
+                        "annotations": {
+                            "bold": True
+                        }
+                    }]
+                }
+            }
+            return
+        elif latest_opening_tag == "em":
+            self.__latest_block = {
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {
+                            "content": data
+                        },
+                        "annotations": {
+                            "italic": True
                         }
                     }]
                 }
