@@ -6,11 +6,12 @@ import json
 class CanvasToNotionHTMLParser(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self)
-        self.__valid_tags = ("p", "h1", "h2", "h3", "a", "strong")
+        self.__valid_tags = ("p", "h1", "h2", "h3", "a", "strong", "span", "hr")
         self.stack = deque()
         self.__output = []
         self.__latest_block = None
         self.__latest_url = None
+        self.__unknown_tag = False
 
     def handle_starttag(self, tag, attrs):
         if len(self.stack) > 0 and self.stack[-1] == "p" and self.__latest_block:
@@ -22,6 +23,27 @@ class CanvasToNotionHTMLParser(HTMLParser):
                     break
         if tag in self.__valid_tags:
             self.stack.append(tag)
+            self.__unknown_tag = False
+        else:
+            self.__unknown_tag = True
+            self.__output.append({
+                "object": "block",
+                "type": "callout",
+                "callout": {
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {
+                            "content": "There is content here that has/may not have been programmed to be parsed and "
+                                       "rendered into Notion. Please check the Canvas assignment site to see if the "
+                                       "missing content is important."
+                        },
+                    }],
+                    "icon": {
+                        "emoji": "⚠"
+                    },
+                    "color": "default"
+                }
+            })
 
     def handle_endtag(self, tag):
         if tag in self.__valid_tags:
@@ -31,11 +53,11 @@ class CanvasToNotionHTMLParser(HTMLParser):
             self.__latest_block = None
 
     def handle_data(self, data):
-        # TODO Fix duplicate
-        if len(self.stack) == 0:
+        # TODO Refactor the hard coded tag jsons
+        if len(self.stack) == 0 or self.__unknown_tag:
             return
         latest_opening_tag = self.stack[-1]
-        if latest_opening_tag == "p":
+        if latest_opening_tag in ("p", "span"):
             text_type = "paragraph"
         elif latest_opening_tag in ("h1", "h2", "h3"):
             text_type = f"heading_{latest_opening_tag[-1]}"
@@ -90,8 +112,14 @@ class CanvasToNotionHTMLParser(HTMLParser):
                 }
             }
             return
-        else:
-            text_type = "paragraph"
+        elif latest_opening_tag == "hr":
+            self.__latest_block = {
+                "object": "block",
+                "type": "divider",
+                "divider": {}
+            }
+            return
+
         self.__latest_block = {
             "object": "block",
             "type": text_type,
@@ -109,7 +137,6 @@ class CanvasToNotionHTMLParser(HTMLParser):
     def parsed_content(self):
         return self.__output
 
-
 class MyHTMLParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         print("Encountered a start tag:", tag)
@@ -119,7 +146,6 @@ class MyHTMLParser(HTMLParser):
 
     def handle_data(self, data):
         print("Encountered some data  :", data)
-
 
 parser = MyHTMLParser()
 parser.feed(
@@ -139,10 +165,12 @@ parser.feed(
     "</p>\n"
     "<p>"
     "<a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version2.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675213?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675213\" data-api-returntype=\"File\">"
-    "Tutorial 9-Sheet 2</a>"
+    "Tutorial 9-Sheet 2"
+    "</a>"
     "</p>\n"
     "<p>"
-    "<a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675214?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675214\" data-api-returntype=\"File\">Tutorial 9-Sheet 3</a></p>\n<p><span style=\"background-color: #f1c40f;\">"
+    "<a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675214?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675214\" data-api-returntype=\"File\">Tutorial 9-Sheet 3</a></p>\n<p>"
+    "<span style=\"background-color: #f1c40f;\">"
     "If you are submitting the tutorial on Canvas, you can pick any sheet from the above and submit your work."
     "</span>"
     "</p>")
