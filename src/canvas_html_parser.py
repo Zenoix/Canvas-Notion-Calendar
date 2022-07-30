@@ -6,7 +6,7 @@ import json
 class CanvasToNotionHTMLParser(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self)
-        self.__valid_tags = ("p", "h1", "h2", "h3", "a", "strong", "span", "hr")
+        self.__valid_tags = ("p", "h1", "h2", "h3", "a", "strong", "span", "hr", "em")
         self.stack = deque()
         self.__output = []
         self.__latest_block = None
@@ -57,61 +57,10 @@ class CanvasToNotionHTMLParser(HTMLParser):
         if len(self.stack) == 0 or self.__unknown_tag:
             return
         latest_opening_tag = self.stack[-1]
-        if latest_opening_tag in ("p", "span"):
+        if latest_opening_tag in ("p", "span", "a", "strong", "em"):
             text_type = "paragraph"
         elif latest_opening_tag in ("h1", "h2", "h3"):
             text_type = f"heading_{latest_opening_tag[-1]}"
-        elif latest_opening_tag == "a":
-            self.__latest_block = {
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [{
-                        "type": "text",
-                        "text": {
-                            "content": data,
-                            "link": {
-                                "url": self.__latest_url
-                            }
-                        }
-                    }]
-                }
-            }
-            return
-        elif latest_opening_tag == "strong":
-            self.__latest_block = {
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [{
-                        "type": "text",
-                        "text": {
-                            "content": data
-                        },
-                        "annotations": {
-                            "bold": True
-                        }
-                    }]
-                }
-            }
-            return
-        elif latest_opening_tag == "em":
-            self.__latest_block = {
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [{
-                        "type": "text",
-                        "text": {
-                            "content": data
-                        },
-                        "annotations": {
-                            "italic": True
-                        }
-                    }]
-                }
-            }
-            return
         elif latest_opening_tag == "hr":
             self.__latest_block = {
                 "object": "block",
@@ -133,6 +82,13 @@ class CanvasToNotionHTMLParser(HTMLParser):
             }
         }
 
+        if latest_opening_tag == "a":
+            self.__latest_block[text_type]["rich_text"][0]["text"]["link"] = {"url": self.__latest_url}
+        elif latest_opening_tag == "strong":
+            self.__latest_block[text_type]["rich_text"][0]["annotations"] = {"bold": True}
+        elif latest_opening_tag == "em":
+            self.__latest_block[text_type]["rich_text"][0]["annotations"] = {"italic": True}
+
     @property
     def parsed_content(self):
         return self.__output
@@ -149,31 +105,12 @@ class MyHTMLParser(HTMLParser):
 
 parser = MyHTMLParser()
 parser.feed(
-    '<p>Here are the tutorial sheets:&nbsp;<strong> (Please take a print or BYO device to class to view the tutorial sheets)</strong></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version1.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675212?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675212\" data-api-returntype=\"File\">Tutorial 9-Sheet 1</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version2.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675213?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675213\" data-api-returntype=\"File\">Tutorial 9-Sheet 2</a></p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675214?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675214\" data-api-returntype=\"File\">Tutorial 9-Sheet 3</a></p>\n<p><span style=\"background-color: #f1c40f;\">If you are submitting the tutorial on Canvas, you can pick any sheet from the above and submit your work.</span></p>')
+    '<p>Worksheet: <a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"assignment3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71997/files/8823921?wrap=1\" target=\"_blank\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71997/files/8823921\" data-api-returntype=\"File\">assignment3.pdf</a></p>\n<p>Testcases for Question 3: Input: <a class=\"instructure_file_link inline_disabled\" title=\"testcases.in\" href=\"https://canvas.auckland.ac.nz/courses/71997/files/8804315?wrap=1\" target=\"_blank\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71997/files/8804315\" data-api-returntype=\"File\">testcases.in</a>; Output: <a class=\"instructure_file_link inline_disabled\" title=\"testcases.out\" href=\"https://canvas.auckland.ac.nz/courses/71997/files/8804316?wrap=1\" target=\"_blank\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71997/files/8804316\" data-api-returntype=\"File\">testcases.out</a></p>\n<p><span style=\"background-color: #fbeeb8;\">Sample solutions: <a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"assignment3-solutions.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71997/files/8993824?wrap=1\" target=\"_blank\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71997/files/8993824\" data-api-returntype=\"File\">assignment3-solutions.pdf</a></span></p>\n<p>&nbsp;</p>\n<p><em>By completing this assessment, I agree to the following declaration:</em></p>\n<p><em>I understand the University expects all students to complete coursework with integrity and honesty. I promise to complete all online assessment with the same academic integrity standards and values. Any identified form of poor academic practice or academic misconduct will be followed up and may result in disciplinary action.</em></p>\n<p><em>As a member of the University\u2019s student body, I will complete this assessment in a fair, honest, responsible and trustworthy manner. This means that:</em></p>\n<ul>\n<li><em>I declare that this assessment is my own work, except where acknowledged appropriately (e.g., use of referencing).</em></li>\n<li><em>I will not seek out any unauthorised help in completing this assessment. (NB. Unauthorised help <strong>includes</strong> a tutorial or answer service whether in person or online, friends or family, etc.)</em></li>\n<li><em>I declare that this work has not been submitted for academic credit in another University of Auckland course, or elsewhere.</em></li>\n<li><em>I am aware the University of Auckland may use Turnitin or any other plagiarism detecting methods to check my content.</em></li>\n<li><em>I will not discuss the content of the assessment with anyone else in any form, including, Canvas, Piazza, Chegg, Facebook, Twitter or any other social media within the assessment period.</em></li>\n<li><em>I will not reproduce the content of this assessment in any domain or in any form where it may be accessed by a third party.</em></li>\n</ul>')
 parser.close()
 
 parser = CanvasToNotionHTMLParser()
 parser.feed(
-    "<p>Here are the tutorial sheets:&nbsp;"
-    "<strong> (Please take a print or BYO device to class to view the tutorial sheets)"
-    "</strong>"
-    "</p>\n"
-    "<p>"
-    "<a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version1.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675212?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675212\" data-api-returntype=\"File\">"
-    "Tutorial 9-Sheet 1"
-    "</a>"
-    "</p>\n"
-    "<p>"
-    "<a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version2.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675213?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675213\" data-api-returntype=\"File\">"
-    "Tutorial 9-Sheet 2"
-    "</a>"
-    "</p>\n"
-    "<p>"
-    "<a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"compsci120_tutorial9_version3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71970/files/8675214?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71970/files/8675214\" data-api-returntype=\"File\">Tutorial 9-Sheet 3</a></p>\n<p>"
-    "<span style=\"background-color: #f1c40f;\">"
-    "If you are submitting the tutorial on Canvas, you can pick any sheet from the above and submit your work."
-    "</span>"
-    "</p>")
+    "<p>Worksheet: <a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"assignment3.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71997/files/8823921?wrap=1\" target=\"_blank\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71997/files/8823921\" data-api-returntype=\"File\">assignment3.pdf</a></p>\n<p>Testcases for Question 3: Input: <a class=\"instructure_file_link inline_disabled\" title=\"testcases.in\" href=\"https://canvas.auckland.ac.nz/courses/71997/files/8804315?wrap=1\" target=\"_blank\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71997/files/8804315\" data-api-returntype=\"File\">testcases.in</a>; Output: <a class=\"instructure_file_link inline_disabled\" title=\"testcases.out\" href=\"https://canvas.auckland.ac.nz/courses/71997/files/8804316?wrap=1\" target=\"_blank\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71997/files/8804316\" data-api-returntype=\"File\">testcases.out</a></p>\n<p><span style=\"background-color: #fbeeb8;\">Sample solutions: <a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"assignment3-solutions.pdf\" href=\"https://canvas.auckland.ac.nz/courses/71997/files/8993824?wrap=1\" target=\"_blank\" data-api-endpoint=\"https://canvas.auckland.ac.nz/api/v1/courses/71997/files/8993824\" data-api-returntype=\"File\">assignment3-solutions.pdf</a></span></p>\n<p>&nbsp;</p>\n<p><em>By completing this assessment, I agree to the following declaration:</em></p>\n<p><em>I understand the University expects all students to complete coursework with integrity and honesty. I promise to complete all online assessment with the same academic integrity standards and values. Any identified form of poor academic practice or academic misconduct will be followed up and may result in disciplinary action.</em></p>\n<p><em>As a member of the University\u2019s student body, I will complete this assessment in a fair, honest, responsible and trustworthy manner. This means that:</em></p>\n<ul>\n<li><em>I declare that this assessment is my own work, except where acknowledged appropriately (e.g., use of referencing).</em></li>\n<li><em>I will not seek out any unauthorised help in completing this assessment. (NB. Unauthorised help <strong>includes</strong> a tutorial or answer service whether in person or online, friends or family, etc.)</em></li>\n<li><em>I declare that this work has not been submitted for academic credit in another University of Auckland course, or elsewhere.</em></li>\n<li><em>I am aware the University of Auckland may use Turnitin or any other plagiarism detecting methods to check my content.</em></li>\n<li><em>I will not discuss the content of the assessment with anyone else in any form, including, Canvas, Piazza, Chegg, Facebook, Twitter or any other social media within the assessment period.</em></li>\n<li><em>I will not reproduce the content of this assessment in any domain or in any form where it may be accessed by a third party.</em></li>\n</ul>")
 content = parser.parsed_content
 parser.close()
 print(json.dumps(content, indent=2))
