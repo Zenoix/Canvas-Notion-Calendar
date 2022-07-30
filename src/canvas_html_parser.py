@@ -1,5 +1,6 @@
 from html.parser import HTMLParser
 from collections import deque
+import json
 
 
 class CanvasToNotionHTMLParser(HTMLParser):
@@ -12,7 +13,7 @@ class CanvasToNotionHTMLParser(HTMLParser):
         self.__latest_url = None
 
     def handle_starttag(self, tag, attrs):
-        if len(self.stack) > 0 and self.stack[-1] == "p":
+        if len(self.stack) > 0 and self.stack[-1] == "p" and self.__latest_block:
             self.__output.append(self.__latest_block)
         if tag == "a":
             for name, value in attrs:
@@ -147,4 +148,4 @@ parser.feed(
     "</p>")
 content = parser.parsed_content
 parser.close()
-print(content)
+print(json.dumps(content, indent=2))
