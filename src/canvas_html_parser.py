@@ -61,42 +61,42 @@ class CanvasToNotionHTMLParser(HTMLParser):
 
     def handle_data(self, data):
         # TODO Have to modify code to handle nested and inline stuff
-        if len(self.stack) == 0 or self.__unknown_tag:
-            return
-        latest_opening_tag = self.stack[-1]
-        if latest_opening_tag in ("p", "span", "a", "strong", "em"):
-            text_type = "paragraph"
-        elif latest_opening_tag in ("h1", "h2", "h3"):
-            text_type = f"heading_{latest_opening_tag[-1]}"
-        elif latest_opening_tag == "li":
-            text_type = "bulleted_list_item" if self.__latest_list_type == "ul" else "numbered_list_item"
-        elif latest_opening_tag == "hr":
-            self.__latest_block = {
-                "object": "block",
-                "type": "divider",
-                "divider": {}
-            }
-            return
-
-        self.__latest_block = {
-            "object": "block",
-            "type": text_type,
-            text_type: {
-                "rich_text": [{
-                    "type": "text",
-                    "text": {
-                        "content": data
-                    }
-                }]
-            }
-        }
-
-        if latest_opening_tag == "a":
-            self.__latest_block[text_type]["rich_text"][0]["text"]["link"] = {"url": self.__latest_url}
-        elif latest_opening_tag == "strong":
-            self.__latest_block[text_type]["rich_text"][0]["annotations"] = {"bold": True}
-        elif latest_opening_tag == "em":
-            self.__latest_block[text_type]["rich_text"][0]["annotations"] = {"italic": True}
+        # if len(self.stack) == 0 or self.__unknown_tag:
+        #     return
+        # latest_opening_tag = self.stack[-1]
+        # if latest_opening_tag in ("p", "span", "a", "strong", "em"):
+        #     text_type = "paragraph"
+        # elif latest_opening_tag in ("h1", "h2", "h3"):
+        #     text_type = f"heading_{latest_opening_tag[-1]}"
+        # elif latest_opening_tag == "li":
+        #     text_type = "bulleted_list_item" if self.__latest_list_type == "ul" else "numbered_list_item"
+        # elif latest_opening_tag == "hr":
+        #     self.__latest_block = {
+        #         "object": "block",
+        #         "type": "divider",
+        #         "divider": {}
+        #     }
+        #     return
+        #
+        # self.__latest_block = {
+        #     "object": "block",
+        #     "type": text_type,
+        #     text_type: {
+        #         "rich_text": [{
+        #             "type": "text",
+        #             "text": {
+        #                 "content": data
+        #             }
+        #         }]
+        #     }
+        # }
+        #
+        # if latest_opening_tag == "a":
+        #     self.__latest_block[text_type]["rich_text"][0]["text"]["link"] = {"url": self.__latest_url}
+        # elif latest_opening_tag == "strong":
+        #     self.__latest_block[text_type]["rich_text"][0]["annotations"] = {"bold": True}
+        # elif latest_opening_tag == "em":
+        #     self.__latest_block[text_type]["rich_text"][0]["annotations"] = {"italic": True}
 
     @property
     def parsed_content(self):
