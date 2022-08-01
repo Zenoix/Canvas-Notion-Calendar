@@ -4,6 +4,8 @@ import time
 
 from dotenv import load_dotenv
 
+from src.canvas_html_parser import CanvasToNotionHTMLParser
+
 load_dotenv()
 
 
@@ -42,7 +44,12 @@ class NotionAPIInterface:
         return types
 
     def create_payload_json(self, title: str, date: str, assignment_url: str = None, course_name: str = "test",
-                            assignment_types: list[dict[str, str]] = None):
+                            assignment_types: list[dict[str, str]] = None, assignment_description: str = None, parser = None):
+        if assignment_description:
+            parser.feed(assignment_description)
+            parsed_description = parser.parsed_content
+        else:
+            parsed_description = None
         return {
             "parent": {"type": "database_id",
                        "database_id": self.__DATABASE_ID},
@@ -80,22 +87,23 @@ class NotionAPIInterface:
                     "type": "multi_select",
                     "multi_select": assignment_types
                 },
-            }
+            },
+            "children": parsed_description
         }
 
     def extract_assignment_information(self, assignment):
         assignment_types = self.__get_assignment_types(assignment)
         return assignment.get("name"), assignment.get("due_at"), assignment.get("html_url"), \
-               assignment.get("course_name"), assignment_types
+               assignment.get("course_name"), assignment_types, assignment.get("description")
 
-    def create_notion_page(self, assignment, headers):
+    def create_notion_page(self, assignment, headers, parser):
         assignment_information = self.extract_assignment_information(assignment)
-        payload = self.create_payload_json(*assignment_information)
+        payload = self.create_payload_json(*assignment_information, parser)
 
         print(f"{assignment_information[3]} - {assignment_information[0]}")
 
         requests.post(self.__API_BASE_URL, json=payload, headers=headers)
-        time.sleep(2)
+        time.sleep(0.7)
 
     def run(self):
         if not self.__assignments:
@@ -109,5 +117,8 @@ class NotionAPIInterface:
             "Notion-Version": "2022-02-22",
             "Content-Type": "application/json"
         }
+
+        parser = CanvasToNotionHTMLParser()
         for assignment in self.__assignments:
-            self.create_notion_page(assignment, headers)
+            self.create_notion_page(assignment, headers, parser)
+        parser.close()
