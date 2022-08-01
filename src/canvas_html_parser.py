@@ -14,7 +14,6 @@ class CanvasToNotionHTMLParser(HTMLParser):
         self.__latest_block = None
         self.__latest_text_type = None
         self.__latest_url = None
-        self.__latest_list_type = None
         self.__unknown_tag = False
 
     def handle_starttag(self, tag, attrs):
@@ -26,14 +25,6 @@ class CanvasToNotionHTMLParser(HTMLParser):
 
         if tag in self.__ignore_tags:
             return
-
-        if tag in ("ul", "ol"):
-            self.__latest_list_type = (
-                "bulleted_list_item"
-                if self.__latest_list_type == "ul"
-                else "numbered_list_item"
-            )
-            self.__unknown_tag = False
 
         if tag not in self.__block_tags | self.__inline_tags:
             self.__unknown_tag = True
@@ -58,25 +49,35 @@ class CanvasToNotionHTMLParser(HTMLParser):
                 }
             )
             return
+
+        if tag in ("ul", "ol"):
+            self.__latest_text_type = (
+                "bulleted_list_item"
+                if self.__latest_text_type == "ul"
+                else "numbered_list_item"
+            )
+
         if tag in self.__block_tags:
             match tag:
                 case "h1" | "h2" | "h3":
                     self.__latest_text_type = f"heading_{tag[-1]}"
                 case "p":
                     self.__latest_text_type = "paragraph"
+                case _:
+                    self.__latest_text_type = tag
             self.__new_block_data(self.__latest_text_type)
         self.__unknown_tag = False
 
     def handle_endtag(self, tag):
         match tag:
-            case "strong":
+            case "strong" | "h4" | "h5" | "h6":
                 self.__convert_latest_rich_text_to_bold()
             case "em":
                 self.__convert_latest_rich_text_to_italics()
             case "a":
                 self.__convert_latest_rich_text_to_url()
             case "ul" | "ol":
-                self.__latest_list_type = None
+                self.__latest_text_type = None
         if self.__latest_block and tag in self.__block_tags:
             self.__output.append(self.__latest_block)
             self.__latest_block = None
@@ -114,16 +115,16 @@ class CanvasToNotionHTMLParser(HTMLParser):
 
     def __new_small_heading_block(self):
         self.__new_paragraph_block()
-        self.__convert_latest_rich_text_to_bold()
 
     def __new_list_block(self):
         self.__latest_block = {
             "object": "block",
-            "type": self.__latest_list_type,
-            self.__latest_list_type: {"rich_text": []},
+            "type": self.__latest_text_type,
+            self.__latest_text_type: {"rich_text": []},
         }
 
     def __append_data_to_block(self, data):
+        print(data)
         latest_block_type = self.__latest_block.get("type")
         rich_text_list = self.__latest_block[latest_block_type]["rich_text"]
         rich_text_list.append({"type": "text", "text": {"content": data}})
@@ -154,7 +155,9 @@ class CanvasToNotionHTMLParser(HTMLParser):
 
     @property
     def parsed_content(self):
-        return self.__output
+        output = self.__output
+        self.__output = []
+        return output
 
 
 if __name__ == "__main__":
@@ -171,41 +174,15 @@ if __name__ == "__main__":
 
     parser = MyHTMLParser()
     parser.feed(
-        """<p><span style="font-size: 18pt; color: #000000; background-color: #fbeeb8;"><a class="instructure_file_link instructure_scribd_file inline_disabled" title="COMPSCI120-2022-S1-test-soln.pdf" href="https://canvas.auckland.ac.nz/courses/71970/files/9022875?wrap=1" target="_blank" data-canvas-previewable="false" data-api-endpoint="https://canvas.auckland.ac.nz/api/v1/courses/71970/files/9022875" data-api-returntype="File">SOLUTIONS</a>:&nbsp;</span></p>
-<p>The mid-semester test is being run as a Canvas quiz.</p>
-<p>This quiz is open for <strong>75 minutes</strong> on <strong>May 2nd</strong> from 6.30 pm<strong> to 7.45 pm</strong>&nbsp;(New Zealand Time).</p>
-<p>There are 8 multiple-choice questions (Q1-8), and one free-response question (Q9).</p>
-<p>The quiz is designed to take <strong>60 minutes</strong>. The <strong>extra 15 minutes are for you to upload your answer to Q9</strong>. If you encounter technical issues uploading your answer to Q9, email <a class="inline_disabled" href="mailto:sudeep.stephen@auckland.ac.nz" target="_blank">sudeep.stephen@auckland.ac.nz</a> (using your university email address) and attach your work, <strong>before 7:45 pm on May 2nd.&nbsp;</strong></p>
-<p>You only have <strong>one attempt</strong> at this quiz. Only click ‘Submit quiz’ when you are sure you are finished and no longer want to make any changes. <strong>You will not be able to re-open the quiz after you click 'Submit quiz'. <br></strong></p>
-<div class="page" title="Page 1">
-<div class="layoutArea">
-<div class="column">
-<p><span>This is an 'open book' test. You can refer to any material you like (including any lecture material), and you can use any calculator you like. However, you must work on your own and <strong>not help or seek help from anybody</strong>. If you are found to have broken this rule, you may face disciplinary action.<br></span></p>
-<p><span style="background-color: #f1c40f;">If you post on online tutoring websites (e.g. Chegg) we are able to obtain your personal information from those websites. Take this as a warning and if you are found to have used these services, you may face disciplinary action.&nbsp;</span></p>
-<p><span>Good luck!</span></p>
-</div>
-</div>
-</div>"""
+        """<h1><span>Student Instructions</span></h1>\n<h4><strong>Accessing your exam</strong></h4>\n<p>When your exam is open, you will be able to start it from the Inspera Dashboard at:&nbsp;<br><a class=\"external\" href=\"http://auckland.inspera.com/\" target=\"_blank\"><span>http://auckland.inspera.com/</span></a></p>\n<p><strong>Important:</strong> This assignment shows the <strong>timetabled exam start time</strong> as the <strong>Due date/time</strong>.</p>\n<p>You can view your exam timetable in&nbsp;<a class=\"external\" href=\"https://www.auckland.ac.nz/en/students/my-tools/sso/timetables-grades-and-course-history/exam-timetable.html\" target=\"_blank\"><span>Student Services Online.</span></a></p>\n<p><strong>Submitting your exam</strong></p>\n<p>Online exams have an additional 30 minutes added to the exam duration to allow time to submit all components of the exam.</p>\n<table border=\"1\">\n<tbody>\n<tr>\n<td>\n<p><strong>File upload guidance</strong></p>\n<p>An exam may require answering a question with handwritten work (such as proofs or diagrams). Answer this type of question by uploading a scanned copy of your work as a PDF through apps such as Adobe Scan.</p>\n<p>See the steps for&nbsp;<strong>Uploading a file for your Inspera exam&nbsp;</strong>on the&nbsp;<a class=\"external\" href=\"https://www.auckland.ac.nz/en/students/academic-information/exams-and-final-results/online-exams/sitting-your-exam.html\" target=\"_blank\"><span>Sitting Your Exam</span></a>&nbsp;page.</p>\n<p>IMPORTANT</p>\n<p>Start uploading any documents<strong>&nbsp;at least&nbsp;15 minutes before the deadline</strong>&nbsp;as it can take several minutes for a submission to upload. After uploading a document always check the correct file has been submitted. You can only submit a document in Inspera if the upload process has started&nbsp;<em>before</em>&nbsp;the end of the exam.&nbsp;<strong>It is your responsibility to ensure your assessment is successfully submitted on time.</strong></p>\n<p>If your file did not upload in time, contact<span>&nbsp;</span><strong>Student Support</strong><span>&nbsp;</span>immediately and do not open or edit the exam documents on your computer.</p>\n</td>\n</tr>\n</tbody>\n</table>\n<p><strong>Useful Guides</strong></p>\n<p>Review&nbsp;<a class=\"external\" href=\"https://www.auckland.ac.nz/en/students/academic-information/exams-and-final-results/online-exams/computer-based-exams.html\" target=\"_blank\"><span>Inspera online exams</span></a>&nbsp;page for key information including the&nbsp;<strong>Getting started with Inspera online exams</strong>&nbsp;guide.</p>\n<p>The&nbsp;<a class=\"external\" href=\"https://cdn.auckland.ac.nz/assets/auckland/students/academic-information/exams-and-final-results/online-exams/student-support-for-inspera-exams.pdf\" target=\"_blank\"><span>Support during your Inspera exam guide</span></a><span>&nbsp;</span>document outlines what to do in case of technical issues (recommend saving this PDF to your device for quick reference).</p>\n<p><a class=\"external\" href=\"https://www.auckland.ac.nz/en/students/academic-information/exams-and-final-results/online-exams/computer-based-exams/inspera-exams-faqs.html\" target=\"_blank\"><span>Click here</span></a>&nbsp;for Inspera exam FAQ\u2019s.</p>\n<table style=\"border-collapse: collapse; border-style: dashed;\">\n<tbody>\n<tr>\n<td>\n<p>FROM THE UNIVERSITY:</p>\n<p>Please note, as per the usual requirements for exams, with online exams you cannot directly contact your instructor during the assessment.</p>\n<p><strong>Student Support</strong></p>\n<p>If you need help during your online exam, please call the Student Contact Centre for advice. The Contact Centre will be open 8:30am \u2013 9:30pm Monday to Friday and 12:00pm \u2013 9:30pm Saturday (NZ Time) throughout the exam period.</p>\n<p>Phone: (Auckland) 09 373 7513, (New Zealand) 0800 61 62 63, or (International)&nbsp;+64 9 373 7513. If you are unable to call, please email&nbsp;<a href=\"mailto:studentinfo@auckland.ac.nz\">studentinfo@auckland.ac.nz</a>&nbsp;and provide exam details, contact information and a description of the issue. Please note that email responses may not be provided before your exam submission deadline so please call in the first instance.</p>\n<p>An Inspera announcement will be made if there are any corrections or clarifications regarding your exam.</p>\n</td>\n</tr>\n</tbody>\n</table>\n<p><strong>Academic Integrity Statement&nbsp;for online exams</strong></p>\n<p>The following academic integrity statement is part of each online exam. Please familiarise yourself with the content below before exam day. More information is available on the <a class=\"inline_disabled external\" href=\"https://www.auckland.ac.nz/en/students/academic-information/exams-and-final-results/online-exams/preparing-for-your-exam/academic-integrity-online-assessment.html\" target=\"_blank\"><span>Academic integrity in online assessments</span></a><span>&nbsp;</span>page.<span>&nbsp;</span><strong>It is your responsibility to ensure you know and understand this information.</strong></p>\n<p>By submitting this assessment, I agree to the following declaration:&nbsp;</p>\n<p><em>As a member of the University\u2019s student body, I will complete this assessment with academic integrity and in a fair, honest, responsible, and trustworthy manner. This means that:&nbsp;</em></p>\n<ul>\n<li><em>I will not seek out any unauthorised help in completing this assessment. Unauthorised help includes, but is not limited to, asking another person, friend, family member, third party, tutorial, search function or answer service, whether in person or online.</em></li>\n<li><em>I will not discuss or share the content of the assessment with anyone else in any form during the assessment period, including but not limited to, using a messaging service, communication channel or discussion forum, Canvas, Piazza, Chegg, third party website, Facebook, Twitter, Discord, social media or any other channel within the assessment period.&nbsp;</em></li>\n<li><em>I will not reproduce and/or share the content of this assessment in any domain or in any form where it may be accessed by a third party.&nbsp;</em></li>\n<li><em>I will not share my answers or thoughts regarding this assessment in any domain or in any form within the assessment period.</em></li>\n<li><em>I am aware the University of Auckland may use Turnitin or any other plagiarism detecting methods to check my content.</em></li>\n<li><em>I declare that this assessment is my own work, except where acknowledged appropriately (e.g., use of referencing).&nbsp;</em></li>\n<li><em>I declare that this work has not been submitted for academic credit in this or another University of Auckland course, or elsewhere.</em></li>\n</ul>\n<p><em>I understand the University expects all students to complete coursework with integrity and honesty. I promise to complete all online assessments with the same academic integrity standards and values.&nbsp;</em></p>\n<p><em>Any identified form of poor academic practice or academic misconduct will be followed up and may result in disciplinary action.&nbsp;</em></p>\n<p><em>I confirm that by completing this exam I agree to the above statements in full.</em></p>",
+ """
     )
     parser.close()
 
     parser = CanvasToNotionHTMLParser()
     parser.feed(
-        """<p><span style="font-size: 18pt; color: #000000; background-color: #fbeeb8;"><a class="instructure_file_link instructure_scribd_file inline_disabled" title="COMPSCI120-2022-S1-test-soln.pdf" href="https://canvas.auckland.ac.nz/courses/71970/files/9022875?wrap=1" target="_blank" data-canvas-previewable="false" data-api-endpoint="https://canvas.auckland.ac.nz/api/v1/courses/71970/files/9022875" data-api-returntype="File">SOLUTIONS</a>:&nbsp;</span></p>
-<p>The mid-semester test is being run as a Canvas quiz.</p>
-<p>This quiz is open for <strong>75 minutes</strong> on <strong>May 2nd</strong> from 6.30 pm<strong> to 7.45 pm</strong>&nbsp;(New Zealand Time).</p>
-<p>There are 8 multiple-choice questions (Q1-8), and one free-response question (Q9).</p>
-<p>The quiz is designed to take <strong>60 minutes</strong>. The <strong>extra 15 minutes are for you to upload your answer to Q9</strong>. If you encounter technical issues uploading your answer to Q9, email <a class="inline_disabled" href="mailto:sudeep.stephen@auckland.ac.nz" target="_blank">sudeep.stephen@auckland.ac.nz</a> (using your university email address) and attach your work, <strong>before 7:45 pm on May 2nd.&nbsp;</strong></p>
-<p>You only have <strong>one attempt</strong> at this quiz. Only click ‘Submit quiz’ when you are sure you are finished and no longer want to make any changes. <strong>You will not be able to re-open the quiz after you click 'Submit quiz'. <br></strong></p>
-<div class="page" title="Page 1">
-<div class="layoutArea">
-<div class="column">
-<p><span>This is an 'open book' test. You can refer to any material you like (including any lecture material), and you can use any calculator you like. However, you must work on your own and <strong>not help or seek help from anybody</strong>. If you are found to have broken this rule, you may face disciplinary action.<br></span></p>
-<p><span style="background-color: #f1c40f;">If you post on online tutoring websites (e.g. Chegg) we are able to obtain your personal information from those websites. Take this as a warning and if you are found to have used these services, you may face disciplinary action.&nbsp;</span></p>
-<p><span>Good luck!</span></p>
-</div>
-</div>
-</div>"""
+        """<h1><span>Student Instructions</span></h1>\n<h4><strong>Accessing your exam</strong></h4>\n<p>When your exam is open, you will be able to start it from the Inspera Dashboard at:&nbsp;<br><a class=\"external\" href=\"http://auckland.inspera.com/\" target=\"_blank\"><span>http://auckland.inspera.com/</span></a></p>\n<p><strong>Important:</strong> This assignment shows the <strong>timetabled exam start time</strong> as the <strong>Due date/time</strong>.</p>\n<p>You can view your exam timetable in&nbsp;<a class=\"external\" href=\"https://www.auckland.ac.nz/en/students/my-tools/sso/timetables-grades-and-course-history/exam-timetable.html\" target=\"_blank\"><span>Student Services Online.</span></a></p>\n<p><strong>Submitting your exam</strong></p>\n<p>Online exams have an additional 30 minutes added to the exam duration to allow time to submit all components of the exam.</p>\n<table border=\"1\">\n<tbody>\n<tr>\n<td>\n<p><strong>File upload guidance</strong></p>\n<p>An exam may require answering a question with handwritten work (such as proofs or diagrams). Answer this type of question by uploading a scanned copy of your work as a PDF through apps such as Adobe Scan.</p>\n<p>See the steps for&nbsp;<strong>Uploading a file for your Inspera exam&nbsp;</strong>on the&nbsp;<a class=\"external\" href=\"https://www.auckland.ac.nz/en/students/academic-information/exams-and-final-results/online-exams/sitting-your-exam.html\" target=\"_blank\"><span>Sitting Your Exam</span></a>&nbsp;page.</p>\n<p>IMPORTANT</p>\n<p>Start uploading any documents<strong>&nbsp;at least&nbsp;15 minutes before the deadline</strong>&nbsp;as it can take several minutes for a submission to upload. After uploading a document always check the correct file has been submitted. You can only submit a document in Inspera if the upload process has started&nbsp;<em>before</em>&nbsp;the end of the exam.&nbsp;<strong>It is your responsibility to ensure your assessment is successfully submitted on time.</strong></p>\n<p>If your file did not upload in time, contact<span>&nbsp;</span><strong>Student Support</strong><span>&nbsp;</span>immediately and do not open or edit the exam documents on your computer.</p>\n</td>\n</tr>\n</tbody>\n</table>\n<p><strong>Useful Guides</strong></p>\n<p>Review&nbsp;<a class=\"external\" href=\"https://www.auckland.ac.nz/en/students/academic-information/exams-and-final-results/online-exams/computer-based-exams.html\" target=\"_blank\"><span>Inspera online exams</span></a>&nbsp;page for key information including the&nbsp;<strong>Getting started with Inspera online exams</strong>&nbsp;guide.</p>\n<p>The&nbsp;<a class=\"external\" href=\"https://cdn.auckland.ac.nz/assets/auckland/students/academic-information/exams-and-final-results/online-exams/student-support-for-inspera-exams.pdf\" target=\"_blank\"><span>Support during your Inspera exam guide</span></a><span>&nbsp;</span>document outlines what to do in case of technical issues (recommend saving this PDF to your device for quick reference).</p>\n<p><a class=\"external\" href=\"https://www.auckland.ac.nz/en/students/academic-information/exams-and-final-results/online-exams/computer-based-exams/inspera-exams-faqs.html\" target=\"_blank\"><span>Click here</span></a>&nbsp;for Inspera exam FAQ\u2019s.</p>\n<table style=\"border-collapse: collapse; border-style: dashed;\">\n<tbody>\n<tr>\n<td>\n<p>FROM THE UNIVERSITY:</p>\n<p>Please note, as per the usual requirements for exams, with online exams you cannot directly contact your instructor during the assessment.</p>\n<p><strong>Student Support</strong></p>\n<p>If you need help during your online exam, please call the Student Contact Centre for advice. The Contact Centre will be open 8:30am \u2013 9:30pm Monday to Friday and 12:00pm \u2013 9:30pm Saturday (NZ Time) throughout the exam period.</p>\n<p>Phone: (Auckland) 09 373 7513, (New Zealand) 0800 61 62 63, or (International)&nbsp;+64 9 373 7513. If you are unable to call, please email&nbsp;<a href=\"mailto:studentinfo@auckland.ac.nz\">studentinfo@auckland.ac.nz</a>&nbsp;and provide exam details, contact information and a description of the issue. Please note that email responses may not be provided before your exam submission deadline so please call in the first instance.</p>\n<p>An Inspera announcement will be made if there are any corrections or clarifications regarding your exam.</p>\n</td>\n</tr>\n</tbody>\n</table>\n<p><strong>Academic Integrity Statement&nbsp;for online exams</strong></p>\n<p>The following academic integrity statement is part of each online exam. Please familiarise yourself with the content below before exam day. More information is available on the <a class=\"inline_disabled external\" href=\"https://www.auckland.ac.nz/en/students/academic-information/exams-and-final-results/online-exams/preparing-for-your-exam/academic-integrity-online-assessment.html\" target=\"_blank\"><span>Academic integrity in online assessments</span></a><span>&nbsp;</span>page.<span>&nbsp;</span><strong>It is your responsibility to ensure you know and understand this information.</strong></p>\n<p>By submitting this assessment, I agree to the following declaration:&nbsp;</p>\n<p><em>As a member of the University\u2019s student body, I will complete this assessment with academic integrity and in a fair, honest, responsible, and trustworthy manner. This means that:&nbsp;</em></p>\n<ul>\n<li><em>I will not seek out any unauthorised help in completing this assessment. Unauthorised help includes, but is not limited to, asking another person, friend, family member, third party, tutorial, search function or answer service, whether in person or online.</em></li>\n<li><em>I will not discuss or share the content of the assessment with anyone else in any form during the assessment period, including but not limited to, using a messaging service, communication channel or discussion forum, Canvas, Piazza, Chegg, third party website, Facebook, Twitter, Discord, social media or any other channel within the assessment period.&nbsp;</em></li>\n<li><em>I will not reproduce and/or share the content of this assessment in any domain or in any form where it may be accessed by a third party.&nbsp;</em></li>\n<li><em>I will not share my answers or thoughts regarding this assessment in any domain or in any form within the assessment period.</em></li>\n<li><em>I am aware the University of Auckland may use Turnitin or any other plagiarism detecting methods to check my content.</em></li>\n<li><em>I declare that this assessment is my own work, except where acknowledged appropriately (e.g., use of referencing).&nbsp;</em></li>\n<li><em>I declare that this work has not been submitted for academic credit in this or another University of Auckland course, or elsewhere.</em></li>\n</ul>\n<p><em>I understand the University expects all students to complete coursework with integrity and honesty. I promise to complete all online assessments with the same academic integrity standards and values.&nbsp;</em></p>\n<p><em>Any identified form of poor academic practice or academic misconduct will be followed up and may result in disciplinary action.&nbsp;</em></p>\n<p><em>I confirm that by completing this exam I agree to the above statements in full.</em></p>
+ """
     )
     content = parser.parsed_content
     parser.close()
